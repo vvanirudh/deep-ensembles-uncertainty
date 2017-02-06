@@ -15,8 +15,8 @@ class MLPGaussianRegressor():
         self.biases = []
         with tf.variable_scope(model_scope+'MLP'):
             for i in range(1, len(sizes)):
-                self.weights.append(tf.Variable(tf.random_normal([sizes[i-1], sizes[i]], stddev=0.001)))
-                self.biases.append(tf.Variable(tf.random_normal([sizes[i]], stddev=0.001)))
+                self.weights.append(tf.Variable(tf.random_normal([sizes[i-1], sizes[i]], stddev=0.001), name='weights_'+str(i-1)))
+                self.biases.append(tf.Variable(tf.random_normal([sizes[i]], stddev=0.001), name='biases_'+str(i-1)))
 
         x = self.input_data
         for i in range(0, len(sizes)-2):
@@ -50,6 +50,11 @@ class MLPGaussianRegressor():
         self.nll_at = tf.reduce_mean(lossfunc_vec_at)
 
         tvars = tf.trainable_variables()
+
+        for v in tvars:
+            print v.name
+            print v.get_shape()
+        
         self.gradients = tf.gradients(args.alpha * self.nll + (1 - args.alpha) * self.nll_at, tvars)
 
         optimizer = tf.train.AdamOptimizer(self.lr)

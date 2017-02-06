@@ -1,8 +1,10 @@
 import numpy as np
 import argparse
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
 from model import MLPGaussianRegressor
+
 
 def main():
 
@@ -27,6 +29,22 @@ def main():
                         help='Learning rate for the optimization')
     args = parser.parse_args()
     train(args)
+
+
+def ensemble_mean_var(ensemble, xs, sess):
+    en_mean = 0
+    en_var = 0
+
+    for model in ensemble:
+        feed = {model.input_data: xs}
+        mean, var = sess.run([model.mean, model.var], feed)
+        en_mean += mean
+        en_var += var + mean**2
+
+    en_mean /= len(ensemble)
+    en_var /= len(ensemble)
+    en_var -= en_mean**2
+    return en_mean, en_var
 
 
 def train(args):
@@ -60,9 +78,21 @@ def train(args):
                 if itr % 100 == 0:
                     print 'itr', itr, 'nll', nll
 
-                # if itr % 100 == 0:
-                    # print mean, var
-                    # print y
+        test(ensemble, sess)
+
+
+def test(ensemble, sess):
+    test_xs = np.expand_dims(np.linspace(-10, 10, num=200, dtype=np.float32), -1)
+    mean, var = ensemble_mean_var(ensemble, test_xs, sess)
+    std = np.sqrt(var)
+    upper = mean + 3*std
+    lower = mean - 3*std
+
+    plt.plot(test_xs, np.cos(test_xs), 'b-')
+    plt.plot(test_xs, mean, 'r-')
+    plt.plot(test_xs, upper, 'g-')
+    plt.plot(test_xs, lower, 'c-')
+    plt.show()
 
 if __name__ == '__main__':
     main()
