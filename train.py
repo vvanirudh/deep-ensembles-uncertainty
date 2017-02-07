@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import ipdb
 
 from model import MLPGaussianRegressor
+from utils import DataLoader_RegressionToy
+from utils import DataLoader_RegressionToy_withKink
 
 
 def main():
@@ -18,7 +20,7 @@ def main():
     parser.add_argument('--max_iter', type=int, default=5000,
                         help='Maximum number of iterations')
     # Batch size
-    parser.add_argument('--batch_size', type=int, default=32,
+    parser.add_argument('--batch_size', type=int, default=10,
                         help='Size of batch')
     # Epsilon for adversarial input perturbation
     parser.add_argument('--epsilon', type=float, default=1e-2,
@@ -27,11 +29,14 @@ def main():
     parser.add_argument('--alpha', type=float, default=0.5,
                         help='Trade off parameter for likelihood score and adversarial score')
     # Learning rate
-    parser.add_argument('--learning_rate', type=float, default=0.1,
+    parser.add_argument('--learning_rate', type=float, default=0.05,
                         help='Learning rate for the optimization')
     # Gradient clipping value
     parser.add_argument('--grad_clip', type=float, default=10.,
                         help='clip gradients at this value')
+    # Learning rate decay
+    parser.add_argument('--decay_rate', type=float, default=0.99,
+                        help='Decay rate for learning rate')
     args = parser.parse_args()
     train(args)
 
@@ -53,15 +58,12 @@ def ensemble_mean_var(ensemble, xs, sess):
 
 
 def train(args):
-    # np.random.seed(1)
-    # tf.set_random_seed(1)
     # Layer sizes
     sizes = [1, 20, 20, 2]
     # Input data
-    xs = np.expand_dims(np.linspace(-5, 5, num=1000, dtype=np.float32), -1)
-    # Target data
-    ys = np.cos(xs)
-    # ys = xs**3 + np.random.normal(scale=0.001, size=xs.shape)
+    dataLoader = DataLoader_RegressionToy_withKink(args)
+
+    # ipdb.set_trace()
 
     ensemble = [MLPGaussianRegressor(args, sizes, 'model'+str(i)) for i in range(args.ensemble_size)]
 
@@ -71,9 +73,8 @@ def train(args):
         for itr in range(args.max_iter):
             # print itr
             for model in ensemble:
-                indices = np.random.choice(np.arange(len(xs)), size=args.batch_size)
-                x = xs[indices, :]
-                y = ys[indices, :]
+                # sess.run(tf.assign(model.lr, args.learning_rate * (args.decay_rate**itr)))
+                x, y = dataLoader.next_batch()
 
                 feed = {model.input_data: x, model.target_data: y}
                 _, nll = sess.run([model.train_op, model.nll], feed)
@@ -81,13 +82,12 @@ def train(args):
                 if itr % 100 == 0:
                     print 'itr', itr, 'nll', nll
 
-        test(ensemble, sess)
+        test(ensemble, sess, args)
 
 
-def test(ensemble, sess):
-    test_xs = np.expand_dims(np.linspace(-10, 10, num=200, dtype=np.float32), -1)
-    # test_ys = test_xs**3 + np.random.normal(scale=0.001, size=test_xs.shape)
-    test_ys = np.cos(test_xs)
+def test(ensemble, sess, args):
+    testDataLoader = DataLoader_RegressionToy_withKink(args, infer=False)
+    test_xs, test_ys = testDataLoader.get_data()
     mean, var = ensemble_mean_var(ensemble, test_xs, sess)
     std = np.sqrt(var)
     upper = mean + 3*std

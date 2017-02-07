@@ -14,13 +14,19 @@ class MLPGaussianRegressor():
 
         self.weights = []
         self.biases = []
+        # self.scales = []
         with tf.variable_scope(model_scope+'MLP'):
             for i in range(1, len(sizes)):
                 self.weights.append(tf.Variable(tf.random_normal([sizes[i-1], sizes[i]], stddev=0.001), name='weights_'+str(i-1)))
                 self.biases.append(tf.Variable(tf.random_normal([sizes[i]], stddev=0.001), name='biases_'+str(i-1)))
+                # self.scales.append(tf.Variable(tf.random_normal([sizes[i]], stddev=0.001), name='scales_'+str(i-1)))
 
         x = self.input_data
         for i in range(0, len(sizes)-2):
+            # z = tf.matmul(x, self.weights[i])
+            # batch_mean, batch_var = tf.nn.moments(z, [0])
+            # z = tf.nn.batch_normalization(z, batch_mean, batch_var, self.biases[i], self.scales[i], 1e-6)
+            # x = tf.nn.relu(z)
             x = tf.nn.relu(tf.add(tf.matmul(x, self.weights[i]), self.biases[i]))
 
         self.output = tf.add(tf.matmul(x, self.weights[-1]), self.biases[-1])
@@ -31,7 +37,7 @@ class MLPGaussianRegressor():
 
         def gaussian_nll(mean_values, var_values, y):
             y_diff = tf.sub(y, mean_values)
-            return 0.5*tf.reduce_sum(tf.log(var_values)) + 0.5*tf.reduce_sum(tf.div(tf.square(y_diff), var_values)) + 0.5*args.batch_size*tf.log(2*np.pi)
+            return 0.5*tf.reduce_mean(tf.log(var_values)) + 0.5*tf.reduce_mean(tf.div(tf.square(y_diff), var_values)) + 0.5*tf.log(2*np.pi)
 
         self.nll = gaussian_nll(self.mean, self.var, self.target_data)
 
