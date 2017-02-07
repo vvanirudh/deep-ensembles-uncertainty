@@ -8,7 +8,7 @@ import ipdb
 from model import MLPGaussianRegressor
 from utils import DataLoader_RegressionToy
 from utils import DataLoader_RegressionToy_withKink
-
+from utils import DataLoader_RegressionToy_sinusoidal
 
 def main():
 
@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--max_iter', type=int, default=5000,
                         help='Maximum number of iterations')
     # Batch size
-    parser.add_argument('--batch_size', type=int, default=10,
+    parser.add_argument('--batch_size', type=int, default=100,
                         help='Size of batch')
     # Epsilon for adversarial input perturbation
     parser.add_argument('--epsilon', type=float, default=1e-2,
@@ -32,7 +32,7 @@ def main():
     parser.add_argument('--learning_rate', type=float, default=0.05,
                         help='Learning rate for the optimization')
     # Gradient clipping value
-    parser.add_argument('--grad_clip', type=float, default=10.,
+    parser.add_argument('--grad_clip', type=float, default=100.,
                         help='clip gradients at this value')
     # Learning rate decay
     parser.add_argument('--decay_rate', type=float, default=0.99,
@@ -59,9 +59,9 @@ def ensemble_mean_var(ensemble, xs, sess):
 
 def train(args):
     # Layer sizes
-    sizes = [1, 20, 20, 2]
+    sizes = [1, 50, 50, 2]
     # Input data
-    dataLoader = DataLoader_RegressionToy_withKink(args)
+    dataLoader = DataLoader_RegressionToy_sinusoidal(args)
 
     # ipdb.set_trace()
 
@@ -80,13 +80,14 @@ def train(args):
                 _, nll = sess.run([model.train_op, model.nll], feed)
 
                 if itr % 100 == 0:
+                    sess.run(tf.assign(model.lr, args.learning_rate * (args.decay_rate ** (itr/100))))
                     print 'itr', itr, 'nll', nll
 
         test(ensemble, sess, args)
 
 
 def test(ensemble, sess, args):
-    testDataLoader = DataLoader_RegressionToy_withKink(args, infer=False)
+    testDataLoader = DataLoader_RegressionToy_sinusoidal(args, infer=True)
     test_xs, test_ys = testDataLoader.get_data()
     mean, var = ensemble_mean_var(ensemble, test_xs, sess)
     std = np.sqrt(var)
