@@ -48,13 +48,14 @@ class MLPGaussianRegressor():
         x_at = self.adversarial_input_data
         for i in range(0, len(sizes)-2):
             x_at = tf.nn.relu(tf.add(tf.matmul(x_at, self.weights[i]), self.biases[i]))
+
         output_at = tf.add(tf.matmul(x_at, self.weights[-1]), self.biases[-1])
-        mean_at = tf.reshape(output_at[:, 0], [-1, 1])
-        raw_var_at = tf.reshape(output_at[:, 1], [-1, 1])
+
+        mean_at, raw_var_at = tf.split(1, 2, output_at)
+
         var_at = tf.log(1 + tf.exp(raw_var_at)) + 1e-6
 
-        lossfunc_vec_at = gaussian_nll(mean_at, var_at, self.target_data)
-        self.nll_at = tf.reduce_mean(lossfunc_vec_at)
+        self.nll_at = gaussian_nll(mean_at, var_at, self.target_data)
 
         tvars = tf.trainable_variables()
 
@@ -66,6 +67,6 @@ class MLPGaussianRegressor():
 
         self.clipped_gradients, _ = tf.clip_by_global_norm(self.gradients, args.grad_clip)
 
-        optimizer = tf.train.AdamOptimizer(self.lr)
+        optimizer = tf.train.RMSPropOptimizer(self.lr)
 
         self.train_op = optimizer.apply_gradients(zip(self.clipped_gradients, tvars))
