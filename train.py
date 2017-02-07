@@ -3,6 +3,8 @@ import argparse
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
+import ipdb
+
 from model import MLPGaussianRegressor
 
 
@@ -27,6 +29,9 @@ def main():
     # Learning rate
     parser.add_argument('--learning_rate', type=float, default=0.1,
                         help='Learning rate for the optimization')
+    # Gradient clipping value
+    parser.add_argument('--grad_clip', type=float, default=10.,
+                        help='clip gradients at this value')
     args = parser.parse_args()
     train(args)
 
@@ -48,14 +53,15 @@ def ensemble_mean_var(ensemble, xs, sess):
 
 
 def train(args):
-    np.random.seed(1)
-    tf.set_random_seed(1)
+    # np.random.seed(1)
+    # tf.set_random_seed(1)
     # Layer sizes
     sizes = [1, 20, 20, 2]
     # Input data
-    xs = np.expand_dims(np.linspace(-5, 5, num=100, dtype=np.float32), -1)
+    xs = np.expand_dims(np.linspace(-5, 5, num=1000, dtype=np.float32), -1)
     # Target data
     ys = np.cos(xs)
+    # ys = xs**3 + np.random.normal(scale=0.001, size=xs.shape)
 
     ensemble = [MLPGaussianRegressor(args, sizes, 'model'+str(i)) for i in range(args.ensemble_size)]
 
@@ -63,17 +69,20 @@ def train(args):
         sess.run(tf.initialize_all_variables())
 
         for itr in range(args.max_iter):
+            # print itr
             for model in ensemble:
                 indices = np.random.choice(np.arange(len(xs)), size=args.batch_size)
                 x = xs[indices, :]
                 y = ys[indices, :]
 
                 feed = {model.input_data: x, model.target_data: y}
-                _, nll, nll_gradients, mean, var = sess.run([model.train_op, model.nll, model.nll_gradients, model.mean, model.var], feed)
+                _, nll = sess.run([model.train_op, model.nll], feed)
 
-                if np.isnan(nll):
-                    print mean, var
-                    return
+                # print nll
+                # ipdb.set_trace()
+                # if np.isnan(nll):
+                #    print mean, var
+                #    return
 
                 if itr % 100 == 0:
                     print 'itr', itr, 'nll', nll
@@ -83,12 +92,14 @@ def train(args):
 
 def test(ensemble, sess):
     test_xs = np.expand_dims(np.linspace(-10, 10, num=200, dtype=np.float32), -1)
+    # test_ys = test_xs**3 + np.random.normal(scale=0.001, size=test_xs.shape)
+    test_ys = np.cos(test_xs)
     mean, var = ensemble_mean_var(ensemble, test_xs, sess)
     std = np.sqrt(var)
     upper = mean + 3*std
     lower = mean - 3*std
 
-    plt.plot(test_xs, np.cos(test_xs), 'b-')
+    plt.plot(test_xs, test_ys, 'b-')
     plt.plot(test_xs, mean, 'r-')
     plt.plot(test_xs, upper, 'g-')
     plt.plot(test_xs, lower, 'c-')

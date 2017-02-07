@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 
 class MLPGaussianRegressor():
@@ -22,19 +23,19 @@ class MLPGaussianRegressor():
         for i in range(0, len(sizes)-2):
             x = tf.nn.relu(tf.add(tf.matmul(x, self.weights[i]), self.biases[i]))
 
-        output = tf.add(tf.matmul(x, self.weights[-1]), self.biases[-1])
+        self.output = tf.add(tf.matmul(x, self.weights[-1]), self.biases[-1])
 
-        self.mean = tf.reshape(output[:, 0], [-1, 1])
-        raw_var = tf.reshape(output[:, 1], [-1, 1])
-        self.var = tf.log(1 + tf.exp(raw_var)) + 1e-6
+        self.mean, self.raw_var = tf.split(1, 2, self.output)
 
-        def get_lossfunc(mean_values, var_values, y):
-            return 0.5*tf.log(var_values) + 0.5*tf.div(tf.square(tf.sub(y, mean_values)), var_values)
+        self.var = tf.log(1 + tf.exp(self.raw_var)) + 1e-6
 
-        lossfunc_vec = get_lossfunc(self.mean, self.var, self.target_data)
-        self.nll = tf.reduce_mean(lossfunc_vec)
+        def gaussian_nll(mean_values, var_values, y):
+            y_diff = tf.sub(y, mean_values)
+            return 0.5*tf.reduce_sum(tf.log(var_values)) + 0.5*tf.reduce_sum(tf.div(tf.square(y_diff), var_values)) + 0.5*args.batch_size*tf.log(2*np.pi)
 
-        self.nll_gradients = tf.gradients(args.alpha * lossfunc_vec, self.input_data)[0]
+        self.nll = gaussian_nll(self.mean, self.var, self.target_data)
+
+        self.nll_gradients = tf.gradients(args.alpha * self.nll, self.input_data)[0]
 
         self.adversarial_input_data = tf.add(self.input_data, args.epsilon * tf.sign(self.nll_gradients))
 
@@ -46,7 +47,7 @@ class MLPGaussianRegressor():
         raw_var_at = tf.reshape(output_at[:, 1], [-1, 1])
         var_at = tf.log(1 + tf.exp(raw_var_at)) + 1e-6
 
-        lossfunc_vec_at = get_lossfunc(mean_at, var_at, self.target_data)
+        lossfunc_vec_at = gaussian_nll(mean_at, var_at, self.target_data)
         self.nll_at = tf.reduce_mean(lossfunc_vec_at)
 
         tvars = tf.trainable_variables()
@@ -54,9 +55,11 @@ class MLPGaussianRegressor():
         for v in tvars:
             print v.name
             print v.get_shape()
-        
+
         self.gradients = tf.gradients(args.alpha * self.nll + (1 - args.alpha) * self.nll_at, tvars)
+
+        self.clipped_gradients, _ = tf.clip_by_global_norm(self.gradients, args.grad_clip)
 
         optimizer = tf.train.AdamOptimizer(self.lr)
 
-        self.train_op = optimizer.apply_gradients(zip(self.gradients, tvars))
+        self.train_op = optimizer.apply_gradients(zip(self.clipped_gradients, tvars))
