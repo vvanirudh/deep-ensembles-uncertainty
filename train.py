@@ -78,12 +78,6 @@ def train(args):
                 feed = {model.input_data: x, model.target_data: y}
                 _, nll = sess.run([model.train_op, model.nll], feed)
 
-                # print nll
-                # ipdb.set_trace()
-                # if np.isnan(nll):
-                #    print mean, var
-                #    return
-
                 if itr % 100 == 0:
                     print 'itr', itr, 'nll', nll
 
