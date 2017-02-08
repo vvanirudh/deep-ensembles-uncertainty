@@ -12,13 +12,17 @@ class MLPGaussianRegressor():
         with tf.variable_scope(model_scope+'learning_rate'):
             self.lr = tf.Variable(args.learning_rate, trainable=False, name='learning_rate')
 
+        with tf.variable_scope(model_scope+'target_stats'):
+            self.output_mean = tf.Variable(0., trainable=False, dtype=tf.float32)
+            self.output_std = tf.Variable(0.1, trainable=False, dtype=tf.float32)
+
         self.weights = []
         self.biases = []
 
         with tf.variable_scope(model_scope+'MLP'):
             for i in range(1, len(sizes)):
-                self.weights.append(tf.Variable(tf.random_normal([sizes[i-1], sizes[i]], stddev=0.001), name='weights_'+str(i-1)))
-                self.biases.append(tf.Variable(tf.random_normal([sizes[i]], stddev=0.001), name='biases_'+str(i-1)))
+                self.weights.append(tf.Variable(tf.random_normal([sizes[i-1], sizes[i]], stddev=0.1), name='weights_'+str(i-1)))
+                self.biases.append(tf.Variable(tf.random_normal([sizes[i]], stddev=0.1), name='biases_'+str(i-1)))
 
         x = self.input_data
         for i in range(0, len(sizes)-2):
@@ -28,7 +32,11 @@ class MLPGaussianRegressor():
 
         self.mean, self.raw_var = tf.split(1, 2, self.output)
 
-        self.var = tf.log(1 + tf.exp(self.raw_var)) + 1e-6
+        # Output transform
+        self.mean = self.mean * self.output_std + self.output_mean
+        self.var = (tf.log(1 + tf.exp(self.raw_var)) + 1e-6) * (self.output_std**2)
+
+        # self.var = tf.log(1 + tf.exp(self.raw_var)) + 1e-6
 
         def gaussian_nll(mean_values, var_values, y):
             y_diff = tf.sub(y, mean_values)
@@ -48,7 +56,11 @@ class MLPGaussianRegressor():
 
         mean_at, raw_var_at = tf.split(1, 2, output_at)
 
-        var_at = tf.log(1 + tf.exp(raw_var_at)) + 1e-6
+        # Output transform
+        mean_at = mean_at * self.output_std + self.output_mean
+        var_at = (tf.log(1 + tf.exp(raw_var_at)) + 1e-6) * (self.output_std**2)
+
+        # var_at = tf.log(1 + tf.exp(raw_var_at)) + 1e-6
 
         self.nll_at = gaussian_nll(mean_at, var_at, self.target_data)
 
@@ -77,6 +89,10 @@ class MLPDropoutGaussianRegressor():
         with tf.variable_scope(model_scope+'learning_rate'):
             self.lr = tf.Variable(args.learning_rate, trainable=False, name='learning_rate')
 
+        with tf.variable_scope(model_scope+'target_stats'):
+            self.output_mean = tf.Variable(0., trainable=False, dtype=tf.float32)
+            self.output_std = tf.Variable(0.1, trainable=False, dtype=tf.float32)
+
         self.dr = tf.placeholder(tf.float32)
 
         self.weights = []
@@ -96,7 +112,11 @@ class MLPDropoutGaussianRegressor():
 
         self.mean, self.raw_var = tf.split(1, 2, self.output)
 
-        self.var = tf.log(1 + tf.exp(self.raw_var)) + 1e-6
+        # Output transform
+        self.mean = self.mean * self.output_std + self.output_mean
+        self.var = (tf.log(1 + tf.exp(self.raw_var)) + 1e-6) * (self.output_std**2)
+
+        # self.var = tf.log(1 + tf.exp(self.raw_var)) + 1e-6
 
         def gaussian_nll(mean_values, var_values, y):
             y_diff = tf.sub(y, mean_values)
@@ -120,7 +140,11 @@ class MLPDropoutGaussianRegressor():
 
         mean_at, raw_var_at = tf.split(1, 2, output_at)
 
-        var_at = tf.log(1 + tf.exp(raw_var_at)) + 1e-6
+        # Output transform
+        mean_at = mean_at * self.output_std + self.output_mean
+        var_at = (tf.log(1 + tf.exp(raw_var_at)) + 1e-6) * (self.output_std**2)
+
+        # var_at = tf.log(1 + tf.exp(raw_var_at)) + 1e-6
 
         self.nll_at = gaussian_nll(mean_at, var_at, self.target_data)
 

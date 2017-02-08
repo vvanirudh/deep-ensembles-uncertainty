@@ -44,8 +44,8 @@ def main():
     parser.add_argument('--keep_prob', type=float, default=0.5,
                         help='Keep probability for dropout')
     args = parser.parse_args()
-    # train_ensemble(args)
-    train_dropout(args)
+    train_ensemble(args)
+    # train_dropout(args)
 
 
 def ensemble_mean_var(ensemble, xs, sess):
@@ -94,6 +94,10 @@ def train_ensemble(args):
     with tf.Session() as sess:
         sess.run(tf.initialize_all_variables())
 
+        for model in ensemble:
+            sess.run(tf.assign(model.output_mean, dataLoader.target_mean))
+            sess.run(tf.assign(model.output_std, dataLoader.target_std))
+
         for itr in range(args.max_iter):
             # print itr
             for model in ensemble:
@@ -101,27 +105,30 @@ def train_ensemble(args):
                 x, y = dataLoader.next_batch()
 
                 feed = {model.input_data: x, model.target_data: y}
-                _, nll = sess.run([model.train_op, model.nll], feed)
+                _, nll, m, v = sess.run([model.train_op, model.nll, model.mean, model.var], feed)
+
+                # ipdb.set_trace()
 
                 if itr % 100 == 0:
                     sess.run(tf.assign(model.lr, args.learning_rate * (args.decay_rate ** (itr/100))))
                     print 'itr', itr, 'nll', nll
 
-        test_ensemble(ensemble, sess, args)
+        test_ensemble(ensemble, sess, dataLoader)
 
 
-def test_ensemble(ensemble, sess, args):
-    testDataLoader = DataLoader_RegressionToy_sinusoidal(args, infer=True)
-    test_xs, test_ys = testDataLoader.get_data()
+def test_ensemble(ensemble, sess, dataLoader):
+    test_xs, test_ys = dataLoader.get_test_data()
     mean, var = ensemble_mean_var(ensemble, test_xs, sess)
     std = np.sqrt(var)
     upper = mean + 3*std
     lower = mean - 3*std
 
-    plt.plot(test_xs, test_ys, 'b-')
-    plt.plot(test_xs, mean, 'r-')
-    plt.plot(test_xs, upper, 'g-')
-    plt.plot(test_xs, lower, 'c-')
+    test_xs_scaled = dataLoader.input_mean + dataLoader.input_std*test_xs
+
+    plt.plot(test_xs_scaled, test_ys, 'b-')
+    plt.plot(test_xs_scaled, mean, 'r-')
+    plt.plot(test_xs_scaled, upper, 'g-')
+    plt.plot(test_xs_scaled, lower, 'c-')
     plt.show()
 
 
@@ -129,7 +136,7 @@ def train_dropout(args):
     # Layer sizes
     sizes = [1, 50, 50, 2]
     # Input data
-    dataLoader = DataLoader_RegressionToy_withKink(args)
+    dataLoader = DataLoader_RegressionToy_sinusoidal(args)
 
     # ipdb.set_trace()
 
@@ -137,7 +144,8 @@ def train_dropout(args):
 
     with tf.Session() as sess:
         sess.run(tf.initialize_all_variables())
-
+        sess.run(tf.assign(model.output_mean, dataLoader.target_mean))
+        sess.run(tf.assign(model.output_std, dataLoader.target_std))
         for itr in range(args.max_iter):
 
             x, y = dataLoader.next_batch()
@@ -149,12 +157,11 @@ def train_dropout(args):
                 sess.run(tf.assign(model.lr, args.learning_rate * (args.decay_rate ** (itr/100))))
                 print 'itr', itr, 'nll', nll
 
-        test_dropout(model, sess, args)
+        test_dropout(model, sess, dataLoader, args)
 
 
-def test_dropout(model, sess, args):
-    testDataLoader = DataLoader_RegressionToy_withKink(args, infer=True)
-    test_xs, test_ys = testDataLoader.get_data()
+def test_dropout(model, sess, dataLoader, args):
+    test_xs, test_ys = dataLoader.get_test_data()
     mean, var = dropout_mean_var(model, test_xs, sess, args)
     std = np.sqrt(var)
     upper = mean + 3*std
