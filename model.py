@@ -14,19 +14,14 @@ class MLPGaussianRegressor():
 
         self.weights = []
         self.biases = []
-        # self.scales = []
+
         with tf.variable_scope(model_scope+'MLP'):
             for i in range(1, len(sizes)):
                 self.weights.append(tf.Variable(tf.random_normal([sizes[i-1], sizes[i]], stddev=0.001), name='weights_'+str(i-1)))
                 self.biases.append(tf.Variable(tf.random_normal([sizes[i]], stddev=0.001), name='biases_'+str(i-1)))
-                # self.scales.append(tf.Variable(tf.random_normal([sizes[i]], stddev=0.001), name='scales_'+str(i-1)))
 
         x = self.input_data
         for i in range(0, len(sizes)-2):
-            # z = tf.matmul(x, self.weights[i])
-            # batch_mean, batch_var = tf.nn.moments(z, [0])
-            # z = tf.nn.batch_normalization(z, batch_mean, batch_var, self.biases[i], self.scales[i], 1e-6)
-            # x = tf.nn.relu(z)
             x = tf.nn.relu(tf.add(tf.matmul(x, self.weights[i]), self.biases[i]))
 
         self.output = tf.add(tf.matmul(x, self.weights[-1]), self.biases[-1])
@@ -97,11 +92,6 @@ class MLPDropoutGaussianRegressor():
             x = tf.nn.relu(tf.nn.xw_plus_b(x, self.weights[i], self.biases[i]))
             x = tf.nn.dropout(x, self.dr, noise_shape=[1, sizes[i+1]], name='dropout_layer'+str(i))
 
-        # Not using adversarial data as we can't maintain the same model
-        # due to the randomization in dropout.
-        # Let's see how the model performs without adversarial data
-        # I expect the probability distribution to be not smooth in x        
-
         self.output = tf.add(tf.matmul(x, self.weights[-1]), self.biases[-1])
 
         self.mean, self.raw_var = tf.split(1, 2, self.output)
@@ -120,6 +110,8 @@ class MLPDropoutGaussianRegressor():
         x_at = self.adversarial_input_data
         for i in range(0, len(sizes)-2):
             x_at = tf.nn.relu(tf.nn.xw_plus_b(x_at, self.weights[i], self.biases[i]))
+            # We need to apply the same dropout mask as before
+            # so that we maintain the same model and not change the network
             graph = tf.get_default_graph()
             mask = graph.get_tensor_by_name('dropout_layer'+str(i)+'/Floor:0')
             x_at = tf.mul(x_at, mask)
