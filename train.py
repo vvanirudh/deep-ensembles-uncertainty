@@ -41,11 +41,11 @@ def main():
     parser.add_argument('--decay_rate', type=float, default=0.99,
                         help='Decay rate for learning rate')
     # Dropout rate (keep prob)
-    parser.add_argument('--keep_prob', type=float, default=0.5,
+    parser.add_argument('--keep_prob', type=float, default=0.8,
                         help='Keep probability for dropout')
     args = parser.parse_args()
-    train_ensemble(args)
-    # train_dropout(args)
+    # train_ensemble(args)
+    train_dropout(args)
 
 
 def ensemble_mean_var(ensemble, xs, sess):
@@ -167,10 +167,12 @@ def test_dropout(model, sess, dataLoader, args):
     upper = mean + 3*std
     lower = mean - 3*std
 
-    plt.plot(test_xs, test_ys, 'b-')
-    plt.plot(test_xs, mean, 'r-')
-    plt.plot(test_xs, upper, 'g-')
-    plt.plot(test_xs, lower, 'c-')
+    test_xs_scaled = dataLoader.input_mean + dataLoader.input_std*test_xs
+
+    plt.plot(test_xs_scaled, test_ys, 'b-')
+    plt.plot(test_xs_scaled, mean, 'r-')
+    plt.plot(test_xs_scaled, upper, 'g-')
+    plt.plot(test_xs_scaled, lower, 'c-')
     plt.show()
 
 if __name__ == '__main__':

@@ -100,8 +100,8 @@ class MLPDropoutGaussianRegressor():
 
         with tf.variable_scope(model_scope+'MLP'):
             for i in range(1, len(sizes)):
-                self.weights.append(tf.Variable(tf.random_normal([sizes[i-1], sizes[i]], stddev=0.001), name='weights_'+str(i-1)))
-                self.biases.append(tf.Variable(tf.random_normal([sizes[i]], stddev=0.001), name='biases_'+str(i-1)))
+                self.weights.append(tf.Variable(tf.random_normal([sizes[i-1], sizes[i]], stddev=0.1), name='weights_'+str(i-1)))
+                self.biases.append(tf.Variable(tf.random_normal([sizes[i]], stddev=0.1), name='biases_'+str(i-1)))
 
         x = self.input_data
         for i in range(0, len(sizes)-2):
