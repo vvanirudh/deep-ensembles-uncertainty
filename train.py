@@ -6,9 +6,12 @@ import matplotlib.pyplot as plt
 import ipdb
 
 from model import MLPGaussianRegressor
+from model import MLPDropoutGaussianRegressor
+
 from utils import DataLoader_RegressionToy
 from utils import DataLoader_RegressionToy_withKink
 from utils import DataLoader_RegressionToy_sinusoidal
+
 
 def main():
 
@@ -37,8 +40,12 @@ def main():
     # Learning rate decay
     parser.add_argument('--decay_rate', type=float, default=0.99,
                         help='Decay rate for learning rate')
+    # Dropout rate (keep prob)
+    parser.add_argument('--keep_prob', type=float, default=0.5,
+                        help='Keep probability for dropout')
     args = parser.parse_args()
-    train(args)
+    # train_ensemble(args)
+    train_dropout(args)
 
 
 def ensemble_mean_var(ensemble, xs, sess):
@@ -57,7 +64,24 @@ def ensemble_mean_var(ensemble, xs, sess):
     return en_mean, en_var
 
 
-def train(args):
+def dropout_mean_var(model, xs, sess, args):
+    en_mean = 0
+    en_var = 0
+
+    for i in range(args.ensemble_size):
+        # NOTE using dropout at test time as well
+        feed = {model.input_data: xs, model.dr: args.keep_prob}
+        mean, var = sess.run([model.mean, model.var], feed)
+        en_mean += mean
+        en_var += var + mean**2
+
+    en_mean /= args.ensemble_size
+    en_var /= args.ensemble_size
+    en_var -= en_mean**2
+    return en_mean, en_var
+
+
+def train_ensemble(args):
     # Layer sizes
     sizes = [1, 50, 50, 2]
     # Input data
@@ -83,13 +107,55 @@ def train(args):
                     sess.run(tf.assign(model.lr, args.learning_rate * (args.decay_rate ** (itr/100))))
                     print 'itr', itr, 'nll', nll
 
-        test(ensemble, sess, args)
+        test_ensemble(ensemble, sess, args)
 
 
-def test(ensemble, sess, args):
+def test_ensemble(ensemble, sess, args):
     testDataLoader = DataLoader_RegressionToy_sinusoidal(args, infer=True)
     test_xs, test_ys = testDataLoader.get_data()
     mean, var = ensemble_mean_var(ensemble, test_xs, sess)
+    std = np.sqrt(var)
+    upper = mean + 3*std
+    lower = mean - 3*std
+
+    plt.plot(test_xs, test_ys, 'b-')
+    plt.plot(test_xs, mean, 'r-')
+    plt.plot(test_xs, upper, 'g-')
+    plt.plot(test_xs, lower, 'c-')
+    plt.show()
+
+
+def train_dropout(args):
+    # Layer sizes
+    sizes = [1, 50, 50, 2]
+    # Input data
+    dataLoader = DataLoader_RegressionToy_withKink(args)
+
+    # ipdb.set_trace()
+
+    model = MLPDropoutGaussianRegressor(args, sizes, 'dropout_model')
+
+    with tf.Session() as sess:
+        sess.run(tf.initialize_all_variables())
+
+        for itr in range(args.max_iter):
+
+            x, y = dataLoader.next_batch()
+
+            feed = {model.input_data: x, model.target_data: y, model.dr: args.keep_prob}
+            _, nll = sess.run([model.train_op, model.nll], feed)
+
+            if itr % 100 == 0:
+                sess.run(tf.assign(model.lr, args.learning_rate * (args.decay_rate ** (itr/100))))
+                print 'itr', itr, 'nll', nll
+
+        test_dropout(model, sess, args)
+
+
+def test_dropout(model, sess, args):
+    testDataLoader = DataLoader_RegressionToy_withKink(args, infer=True)
+    test_xs, test_ys = testDataLoader.get_data()
+    mean, var = dropout_mean_var(model, test_xs, sess, args)
     std = np.sqrt(var)
     upper = mean + 3*std
     lower = mean - 3*std
