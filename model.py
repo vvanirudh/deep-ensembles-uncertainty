@@ -36,8 +36,6 @@ class MLPGaussianRegressor():
         self.mean = self.mean * self.output_std + self.output_mean
         self.var = (tf.log(1 + tf.exp(self.raw_var)) + 1e-6) * (self.output_std**2)
 
-        # self.var = tf.log(1 + tf.exp(self.raw_var)) + 1e-6
-
         def gaussian_nll(mean_values, var_values, y):
             y_diff = tf.sub(y, mean_values)
             return 0.5*tf.reduce_mean(tf.log(var_values)) + 0.5*tf.reduce_mean(tf.div(tf.square(y_diff), var_values)) + 0.5*tf.log(2*np.pi)
@@ -59,8 +57,6 @@ class MLPGaussianRegressor():
         # Output transform
         mean_at = mean_at * self.output_std + self.output_mean
         var_at = (tf.log(1 + tf.exp(raw_var_at)) + 1e-6) * (self.output_std**2)
-
-        # var_at = tf.log(1 + tf.exp(raw_var_at)) + 1e-6
 
         self.nll_at = gaussian_nll(mean_at, var_at, self.target_data)
 
@@ -116,8 +112,6 @@ class MLPDropoutGaussianRegressor():
         self.mean = self.mean * self.output_std + self.output_mean
         self.var = (tf.log(1 + tf.exp(self.raw_var)) + 1e-6) * (self.output_std**2)
 
-        # self.var = tf.log(1 + tf.exp(self.raw_var)) + 1e-6
-
         def gaussian_nll(mean_values, var_values, y):
             y_diff = tf.sub(y, mean_values)
             return 0.5*tf.reduce_mean(tf.log(var_values)) + 0.5*tf.reduce_mean(tf.div(tf.square(y_diff), var_values)) + 0.5*tf.log(2*np.pi)
@@ -143,8 +137,6 @@ class MLPDropoutGaussianRegressor():
         # Output transform
         mean_at = mean_at * self.output_std + self.output_mean
         var_at = (tf.log(1 + tf.exp(raw_var_at)) + 1e-6) * (self.output_std**2)
-
-        # var_at = tf.log(1 + tf.exp(raw_var_at)) + 1e-6
 
         self.nll_at = gaussian_nll(mean_at, var_at, self.target_data)
 

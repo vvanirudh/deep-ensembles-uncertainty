@@ -11,6 +11,8 @@ from model import MLPDropoutGaussianRegressor
 from utils import DataLoader_RegressionToy
 from utils import DataLoader_RegressionToy_withKink
 from utils import DataLoader_RegressionToy_sinusoidal
+from utils import DataLoader_RegressionToy_sinusoidal_break
+from utils import DataLoader_RegressionToy_break
 
 
 def main():
@@ -32,7 +34,7 @@ def main():
     parser.add_argument('--alpha', type=float, default=0.5,
                         help='Trade off parameter for likelihood score and adversarial score')
     # Learning rate
-    parser.add_argument('--learning_rate', type=float, default=0.05,
+    parser.add_argument('--learning_rate', type=float, default=0.01,
                         help='Learning rate for the optimization')
     # Gradient clipping value
     parser.add_argument('--grad_clip', type=float, default=100.,
@@ -87,8 +89,6 @@ def train_ensemble(args):
     # Input data
     dataLoader = DataLoader_RegressionToy_sinusoidal(args)
 
-    # ipdb.set_trace()
-
     ensemble = [MLPGaussianRegressor(args, sizes, 'model'+str(i)) for i in range(args.ensemble_size)]
 
     with tf.Session() as sess:
@@ -99,15 +99,13 @@ def train_ensemble(args):
             sess.run(tf.assign(model.output_std, dataLoader.target_std))
 
         for itr in range(args.max_iter):
-            # print itr
+
             for model in ensemble:
-                # sess.run(tf.assign(model.lr, args.learning_rate * (args.decay_rate**itr)))
+
                 x, y = dataLoader.next_batch()
 
                 feed = {model.input_data: x, model.target_data: y}
                 _, nll, m, v = sess.run([model.train_op, model.nll, model.mean, model.var], feed)
-
-                # ipdb.set_trace()
 
                 if itr % 100 == 0:
                     sess.run(tf.assign(model.lr, args.learning_rate * (args.decay_rate ** (itr/100))))
@@ -122,13 +120,13 @@ def test_ensemble(ensemble, sess, dataLoader):
     std = np.sqrt(var)
     upper = mean + 3*std
     lower = mean - 3*std
-
+    
     test_xs_scaled = dataLoader.input_mean + dataLoader.input_std*test_xs
 
     plt.plot(test_xs_scaled, test_ys, 'b-')
     plt.plot(test_xs_scaled, mean, 'r-')
-    plt.plot(test_xs_scaled, upper, 'g-')
-    plt.plot(test_xs_scaled, lower, 'c-')
+
+    plt.fill_between(test_xs_scaled[:, 0], lower[:, 0], upper[:, 0], color='yellow', alpha=0.5)
     plt.show()
 
 
@@ -137,8 +135,6 @@ def train_dropout(args):
     sizes = [1, 50, 50, 2]
     # Input data
     dataLoader = DataLoader_RegressionToy_sinusoidal(args)
-
-    # ipdb.set_trace()
 
     model = MLPDropoutGaussianRegressor(args, sizes, 'dropout_model')
 
@@ -171,8 +167,8 @@ def test_dropout(model, sess, dataLoader, args):
 
     plt.plot(test_xs_scaled, test_ys, 'b-')
     plt.plot(test_xs_scaled, mean, 'r-')
-    plt.plot(test_xs_scaled, upper, 'g-')
-    plt.plot(test_xs_scaled, lower, 'c-')
+
+    plt.fill_between(test_xs_scaled[:, 0], lower[:, 0], upper[:, 0], color='yellow', alpha=0.5)
     plt.show()
 
 if __name__ == '__main__':
