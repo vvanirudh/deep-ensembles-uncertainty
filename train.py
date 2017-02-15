@@ -19,13 +19,13 @@ def main():
 
     parser = argparse.ArgumentParser()
     # Ensemble size
-    parser.add_argument('--ensemble_size', type=int, default=10,
+    parser.add_argument('--ensemble_size', type=int, default=5,
                         help='Size of the ensemble')
     # Maximum number of iterations
     parser.add_argument('--max_iter', type=int, default=5000,
                         help='Maximum number of iterations')
     # Batch size
-    parser.add_argument('--batch_size', type=int, default=100,
+    parser.add_argument('--batch_size', type=int, default=10,
                         help='Size of batch')
     # Epsilon for adversarial input perturbation
     parser.add_argument('--epsilon', type=float, default=1e-2,
@@ -34,7 +34,7 @@ def main():
     parser.add_argument('--alpha', type=float, default=0.5,
                         help='Trade off parameter for likelihood score and adversarial score')
     # Learning rate
-    parser.add_argument('--learning_rate', type=float, default=0.01,
+    parser.add_argument('--learning_rate', type=float, default=0.005,
                         help='Learning rate for the optimization')
     # Gradient clipping value
     parser.add_argument('--grad_clip', type=float, default=100.,
@@ -46,8 +46,8 @@ def main():
     parser.add_argument('--keep_prob', type=float, default=0.8,
                         help='Keep probability for dropout')
     args = parser.parse_args()
-    # train_ensemble(args)
-    train_dropout(args)
+    train_ensemble(args)
+    # train_dropout(args)
 
 
 def ensemble_mean_var(ensemble, xs, sess):
@@ -87,7 +87,7 @@ def train_ensemble(args):
     # Layer sizes
     sizes = [1, 50, 50, 2]
     # Input data
-    dataLoader = DataLoader_RegressionToy_sinusoidal(args)
+    dataLoader = DataLoader_RegressionToy_withKink(args)
 
     ensemble = [MLPGaussianRegressor(args, sizes, 'model'+str(i)) for i in range(args.ensemble_size)]
 

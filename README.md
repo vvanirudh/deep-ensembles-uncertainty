@@ -12,6 +12,10 @@ Predictive uncertainty estimates obtained by using the ensemble approach propose
 
 Predictive uncertainty estimates obtained by using a dropout Gaussian regressor. During training, we train the model to minimize NLL with dropout. Hence, as a result, a larger (theoretically, infinite) ensemble of networks are trained simultaneously. At test time, we maintain the same dropout and average the predictions of a fixed number (in the above plot, 50) of networks that are part of the trained ensemble.
 
+![Kink example](kink.png)
+
+I also tried out the kink example given in the paper by breaking the cubic curve in the middle and introducing a kink (sinusoidal curve)
+
 The implementation is partly inspired from [this](https://github.com/muupan/deep-ensemble-uncertainty) repository
 
 **Author** : Anirudh Vemula
