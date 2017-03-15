@@ -10,7 +10,7 @@ Predictive uncertainty estimates obtained by using the ensemble approach propose
 
 ![Sinusoidal gaussian dropout regressor](sinusoidal_dropout.png)
 
-Predictive uncertainty estimates obtained by using a dropout Gaussian regressor. During training, we train the model to minimize NLL with dropout. Hence, as a result, a larger (theoretically, infinite) ensemble of networks are trained simultaneously. At test time, we maintain the same dropout and average the predictions of a fixed number (in the above plot, 50) of networks that are part of the trained ensemble.
+Predictive uncertainty estimates obtained by using a dropout Gaussian regressor. During training, we train the model to minimize NLL with dropout. Hence, as a result, a larger ensemble of networks are trained simultaneously. At test time, we maintain the same dropout and average the predictions of a fixed number (in the above plot, 50) of networks that are part of the trained ensemble.
 
 ![Kink example](kink.png)
 
