@@ -1,7 +1,6 @@
 import tensorflow as tf
 import numpy as np
 
-
 class MLPGaussianRegressor():
 
     def __init__(self, args, sizes, model_scope):
@@ -30,14 +29,14 @@ class MLPGaussianRegressor():
 
         self.output = tf.add(tf.matmul(x, self.weights[-1]), self.biases[-1])
 
-        self.mean, self.raw_var = tf.split(1, 2, self.output)
+        self.mean, self.raw_var = tf.split(self.output, [1,1], axis=1)
 
         # Output transform
         self.mean = self.mean * self.output_std + self.output_mean
         self.var = (tf.log(1 + tf.exp(self.raw_var)) + 1e-6) * (self.output_std**2)
 
         def gaussian_nll(mean_values, var_values, y):
-            y_diff = tf.sub(y, mean_values)
+            y_diff = tf.subtract(y, mean_values)
             return 0.5*tf.reduce_mean(tf.log(var_values)) + 0.5*tf.reduce_mean(tf.div(tf.square(y_diff), var_values)) + 0.5*tf.log(2*np.pi)
 
         self.nll = gaussian_nll(self.mean, self.var, self.target_data)
@@ -52,7 +51,7 @@ class MLPGaussianRegressor():
 
         output_at = tf.add(tf.matmul(x_at, self.weights[-1]), self.biases[-1])
 
-        mean_at, raw_var_at = tf.split(1, 2, output_at)
+        mean_at, raw_var_at = tf.split(output_at, [1, 1], axis=1)
 
         # Output transform
         mean_at = mean_at * self.output_std + self.output_mean
@@ -113,7 +112,7 @@ class MLPDropoutGaussianRegressor():
         self.var = (tf.log(1 + tf.exp(self.raw_var)) + 1e-6) * (self.output_std**2)
 
         def gaussian_nll(mean_values, var_values, y):
-            y_diff = tf.sub(y, mean_values)
+            y_diff = tf.subtract(y, mean_values)
             return 0.5*tf.reduce_mean(tf.log(var_values)) + 0.5*tf.reduce_mean(tf.div(tf.square(y_diff), var_values)) + 0.5*tf.log(2*np.pi)
 
         self.nll = gaussian_nll(self.mean, self.var, self.target_data)
